@@ -1,0 +1,88 @@
+folder async ,read.txt
+
+const express = require('express');
+const app = express();
+const port = 9999;
+
+
+
+// built in middleware
+app.use(express.static)
+
+// app.get(route,callback) callbak means calling ffunction and route means '/about'
+app.get('/',(req,res)=>{
+    res.send("<h1>hello from the express server</h1>")
+
+})
+
+
+
+
+app.listen(port,()=>{
+    console.log(`listening to the port ${port}`)
+})
+
+
+
+Event modules
+// Event Modules
+// Node.js has a built in module ,called  "Events"
+// Where you can create fire and and listen for your own events.
+// Example -1 ,Registering for the events to the fired only one time using once change.
+// Example -2,Create an events emitter instance and register a couple of callback
+// Example-3 , Registering for the  event with callback parameters
+
+
+const EventEmitter = require("events")
+const events = new EventEmitter();
+
+// events.on("sayName",()=>{
+//     console.log("Your name is Naveen")
+// })
+
+// events.on("sayName",()=>{
+
+//     console.log("Your name is Neevan")
+// });
+// events.on("sayName",()=>{
+//     console.log("Your name is veehan")
+// });
+// events.emit("sayName");
+
+
+// events.on("sayName",()=>{
+//     console.log("Your name is Naveen")
+// }) it will not get the output
+
+events.on("chekPage",(sc,msg)=>{
+console.log(`status code is ${sc} and  the Page is ${msg}`)
+});
+events.emit("chekPage",200,"Ok");
+
+
+
+modules
+index.js
+const {add,sub,mul} = require("./oper")
+console.log(add(20,2))
+console.log(sub(12,5))
+console.log(mul(22,4))
+
+oper.js
+const add = (a,b)=>{
+    return a+b;
+
+}
+// const name = "Naveen";
+// module.exports = name;
+const sub = (a,b)=>{
+    return a-b;
+}
+const mul = (a,b)=>{
+    return a*b;
+
+}
+// module.exports.add1 = add;
+// module.exports.sub1 = sub;
+// module.exports.mul1 = mul;
+module.exports={add,sub,mul}
