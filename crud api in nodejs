@@ -1,0 +1,104 @@
+
+
+//simple rest api 
+/*
+const express = require('express')
+const app = express()
+const port = 3000;
+app.get('/url',(req,res,next)=>{
+    res.json(['lisa','mika','Ranveer','Kabir','Sunny'])
+})
+
+
+
+app.listen(port,()=>{
+    console.log(`server is ready on ${port}`)
+})
+*/
+
+
+
+/* the main function used in any rest best architecture.
+1.Get -> provide read only access to a resource.
+2.Put ->Create e new resource
+3.Delete -> Remove a resources.
+4.POST-> update  an existing resources or create a new resources.*/
+
+
+const express = require('express');
+const Joi = require('Joi')//used for validation
+const app = express();
+app.use(express.json());
+const port = 3000
+
+const movies = [
+               {title:'3 idiot',id:101},
+               {title:'Veer Zara',id:102},
+               {title:'Jai bheem',id:103}
+               ]
+//Read request Handlers
+app.get('/',(req,res)=>{
+    res.send('Welcome to watached to all these three movies')
+})
+app.get('/api/movies',(req,res)=>{
+    res.send(movies)
+})
+app.get('/api/movies/:id',(req,res)=>{
+    const movie = movies.find(c=>c.id === req.params.id)
+    if(!movie)res.status(404).send("OOPs.. Can't find what you are looking for")
+    res.send(movie)
+})
+//Create request handler 
+app.post('/api/movies', (req, res)=> {
+ 
+    const { error } = validatemovies(req.body);
+    if (error){
+    res.status(400).send(error.details[0].message)
+    return;
+    }
+    const book = {
+    id: movies.length + 1,
+    title: req.body.title
+    };
+    movies.push(movie);
+    res.send(movie);
+    });
+// Update request handler
+app.post('/api/movies', (req, res)=> {
+ 
+    const { error } = validatemovies(req.body);
+    if (error){
+    res.status(400).send(error.details[0].message)
+    return;
+    }
+    const movie = {
+    id: movies.length + 1,
+    title: req.body.title
+    };
+    movies.push(movie);
+    res.send(movie);
+    });
+//DELETE Request Handler
+app.delete('/api/movies/:id', (req, res) => {
+ 
+    const movie = movies.find( c=> c.id === parseInt(req.params.id));
+    if(!movie) res.status(404).send('<h2 style="font-family: Malgun Gothic; color: darkred;"> Not Found!! </h2>');
+     
+    const index = movies.indexOf(movie)
+     
+    res.send(movie);
+    });
+     
+    function validatemovies(movie) {
+    const schema = {
+    title: Joi.string().min(3).required()
+    };
+    return Joi.validate(movie, schema);
+     
+    }
+
+
+
+app.listen(port,()=>{
+    console.log(`server is running on ${port}`)
+})
