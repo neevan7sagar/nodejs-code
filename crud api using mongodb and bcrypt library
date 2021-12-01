@@ -1,0 +1,98 @@
+const express = require('express')
+const app = express()
+
+const bodyParser = require('body-parser')
+const port = 3000;
+
+var mongoose = require('mongoose')
+const bcrypt = require('bcrypt');
+
+var StudentModel = require('./studentschema')
+app.use(bodyParser.json())
+// app.use(bodyParser.urlencodedY({extended:true}))
+
+var query = "mongodb+srv://admin:admin@cluster0.b9pn7.mongodb.net/mydatabase?retryWrites=true&w=majority"
+mongoose.connect(query,{
+    useNewUrlParser:true,
+    useUnifiedTopology:true
+}).then(() => {
+    console.log("Success")
+}).catch(err => {
+    console.log("Error", err)
+    process.exit()
+})
+app.get('/',(req,res)=>{
+    // StudentModel.findOne({Name:req.params.name},function(err, data) for one 
+    StudentModel.find(function(err, data)
+     {
+        if(err){
+            console.log(err);
+        }
+        else{
+            res.send(data);
+        }
+    })
+})
+app.post('/create',async (req,res) => {
+const salt = await bcrypt.genSalt(10)
+req.body.password = await bcrypt.hash(req.body.password,salt)
+    StudentModel.create(req.body).then(user => {
+            res.send(user)
+        }).catch(err => {
+            console.log(err)
+        })
+        // var newStudent = new StudentModel();
+        // newStudent.Name = req.body.Name;
+        // newStudent.Id = req.body.Id;
+        // newStudent.Birthday = req.body.Birthday;
+        // newStudent.Address = req.body.Address;
+        // newStudent.save((err,data)=>{
+        //     if(err){
+        //         console.log(error)
+        //     }
+        //     else{
+        //        res.send ("Data inserted")
+        //     }
+        // })
+    })
+    app.delete('/delete',(req,res)=>{
+        StudentModel.remove({Name:"sarvesh"},(err,data)=>{
+            if(err){
+                console.log(error)
+            }
+            else{
+                res.send(data)
+            }
+        })
+    })
+    app.put("/update",(req,res)=>{
+        StudentModel.findByIdAndUpdate(req.body.id, {Name:req.body.Name},(err,data)=>{
+            if(err){
+                console.log(err)
+            }
+            else{
+                res.send(data)
+            }
+        })
+    })
+
+    app.post("/login",async (req,res)=>{
+       const user = await StudentModel.findOne({Email:req.body.Email})
+       if(user){
+        const validatePassword = await bcrypt.compare(req.body.password, user.password)
+        if(validatePassword){
+            res.send("User logged in")
+        } else{
+            res.send("Password is incorrect")
+        }
+       }else{
+           res.send("User not found")
+       }
+    })
+
+
+
+
+app.listen(port,()=>{
+    console.log(`server is running on ${port}`)
+})
