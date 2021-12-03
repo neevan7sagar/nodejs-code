@@ -1,0 +1,56 @@
+const express = require('express')
+const app = express();
+const nodemailer = require('nodemailer');
+const bodyParser = require('body-parser');
+
+const jwt = require('jsonwebtoken')
+const { supportsColor } = require('supports-color');
+const { message } = require('statuses');
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({extended:false}));
+const route = express.Router();
+const port = process.env.PORT||3000;
+
+require("dotenv").config()
+ 
+
+app.post('/create',(req,res)=>{
+    const to = req.body.email
+    var transporter = nodemailer.createTransport({
+        service:"gmail",
+        secure:false,
+        port:587,
+        auth: {
+          user: process.env.user,
+          pass: process.env.pass
+        },
+        tls: {rejectUnauthorized: false}
+      });
+    const mailData = {
+        from :process.env.user,
+        to:to,
+        subject:"sending email by nodejs",
+        text:"bro how are you",
+    };
+    transporter.sendMail(mailData,(error,info)=>{
+        if(error){
+             console.log(error)
+        }
+        else{
+        res.status(200).send(info.response)
+        console.log(info)
+        }
+    })
+})
+
+app.listen(port,()=>{
+    console.log(`Server is running on ${port}`)
+})
+
+
+.env file
+port = 3000
+user = bsslnaveen@gmail.com
+pass = 2016mca1016
+
+
