@@ -1,131 +1,136 @@
 const express = require('express')
-const app = express()
-
+const app = express();
 const bodyParser = require('body-parser')
-const port = 3000;
-
-var mongoose = require('mongoose')
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken')
+const schemamodel = require('./appschema')
+const mongoose = require('mongoose')
+const jwt = require('jsonwebtoken');
+const { schema } = require('./appschema');
+const nodemailer = require('nodemailer')
+var path=require('path')
+const port = 3000
 require('dotenv').config()
-var StudentModel = require('./studentschema')
-app.use(bodyParser.json())
-// app.use(bodyParser.urlencodedY({extended:true}))
 
-var query = "mongodb+srv://admin:admin@cluster0.b9pn7.mongodb.net/mydatabase?retryWrites=true&w=majority"
-mongoose.connect(query,{
-    useNewUrlParser:true,
-    useUnifiedTopology:true
+app.use(bodyParser.json())
+
+// var randtoken = require('rand-token')
+
+
+const query = "mongodb+srv://admin:admin@cluster0.b9pn7.mongodb.net/mydatabase?retryWrites=true&w=majority"
+mongoose.connect(query, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 }).then(() => {
     console.log("Connection successful")
 }).catch(err => {
     console.log("Error", err)
-    process.exit()
 })
 
-app.post('/create',async (req,res) => {
-const salt = await bcrypt.genSalt(10)
-req.body.password = await bcrypt.hash(req.body.password,salt)
-    StudentModel.create(req.body).then(user => {
-            res.send(user)
-        }).catch(err => {
-            console.log(err)
-        })
-        // var newStudent = new StudentModel();
-        // newStudent.Name = req.body.Name;
-        // newStudent.Id = req.body.Id;
-        // newStudent.Birthday = req.body.Birthday;
-        // newStudent.Address = req.body.Address;
-        // newStudent.save((err,data)=>{
-        //     if(err){
-        //         console.log(error)
-        //     }
-        //     else{
-        //        res.send ("Data inserted")
-        //     }
-        // })
-    })
-    app.delete('/delete',(req,res)=>{
-        StudentModel.remove({Name:"sarvesh"},(err,data)=>{
-            if(err){
-                console.log(error)
-            }
-            else{
-                res.send(data)
-            }
-        })
-    })
-    app.put("/update",(req,res)=>{
-        StudentModel.findByIdAndUpdate(req.body.id, {Name:req.body.Name},(err,data)=>{
-            if(err){
-                console.log(err)
-            }
-            else{
-                res.send(data)
-            }
-        })
-    })
-
-    app.post("/login",async (req,res)=>{
-       const user = await StudentModel.findOne({Email:req.body.Email})
-       if(user){
-        const validatePassword = await bcrypt.compare(req.body.password, user.password)
-        if(validatePassword){
-            const token = jwt.sign({email:user.Email},process.env.ACCESS_TOKEN_SECRET,{"expiresIn":"15m"})
-            res.send({message:"success",token:token})
-        } else{
-            res.send("Password is incorrect")
+app.post('/register',async (req,res) => {
+    const salt = await bcrypt.genSalt(10)
+    req.body.password = await bcrypt.hash(req.body.password,salt)
+        schemamodel.create(req.body).then(user => {
+            const token = jwt.sign({email:user.email},process.env.ACCESS_TOKEN_SECRET,{"expiresIn":"1d"})
+            const link = 'http://localhost:3000/account/activation/'+token
+    var transporter = nodemailer.createTransport({
+        service:"gmail",
+        secure:false,
+        port:587,
+        auth: {
+          user: process.env.useremail,
+          pass: process.env.userpassword
+        },
+        tls: {rejectUnauthorized: false}
+      });
+    const mailData = {
+        from :process.env.useremail,
+        to:user.email,
+        subject:"Account Activation",
+        text:link
+    };
+    transporter.sendMail(mailData,(error,info)=>{
+        if(error){
+             console.log(error)
         }
-       }else{
-           // token generated with jwt.sign method
-           res.send("User not found")
-       }
-    })
-    // app.use()
-    const ChekUrl = (req,res,next)=>{
-        // verify token here
-        const header = req.headers.authorization
-        const token = header && header.split(' ')[1]
-        console.log(token)
-        if(token == null) return res.send("Token not found")
-        jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,verifiedJwt)=>{
-            if(err) return res.send("Token is expired or it is incorrect")
-            next();
-            }
-        )
-    }
-    app.use(ChekUrl);
-    app.get('/',(req,res)=>{
-        // StudentModel.findOne({Name:req.params.name},function(err, data) for one 
-        StudentModel.find(function(err, data)
-         {
-            if(err){
-                console.log(err);
-            }
-            else{
-                res.send(data);
+        else{
+            console.log(info.response)
+            res.send("One confirmation email has been sent to your email address so You need to confirm your email for account activation")
             }
         })
     })
+})
 
 
-// const bcrypt = require('bcrypt')
-const securePassword = async(password)=>{
-const passwordHash = await bcrypt.hash(password,10)
-console.log(passwordHash)
-// const passwordHash = await bcrypt.compare(password,10)
-const passwordMatch = await bcrypt.compare(password,passwordHash)
-// const passwordMatch = await bcrypt.compare('naveen@123',passwordHash) true
-// const passwordMatch = await bcrypt.compare('naveen@13',passwordHash) //false
+app.get('/account/activation/:token',async(req,res) => {
+     const vToken = req.params.token
+     jwt.verify(vToken,process.env.ACCESS_TOKEN_SECRET, async (err,payload)=>{
+        if(err) return res.status(401).send({code:401,message:"faliure",error:"Token is incroorec or it is expired"})
+        const user = await schemamodel.findOne({email:payload.email})
+        user.isActive = true
+        user.save().then((success)=>{
+            res.status(200).send({code:200,message:"success",result:"Your account has been activated successfully"})
+        }).catch((err)=>{res.json(err)})
+     })
+})
 
-console.log(passwordMatch)
-} 
-securePassword("naveen@123")
-// $2b$10$QEyYsSfxS6X/BYr6.n5um.t3i61JLGfMbLjqtv4rB.j1mTNi0wIUW
+app.post("/login",async (req,res)=>{
+    const user = await schemamodel.findOne({email:req.body.email})
+    if(user){
+        if(user.isActive){
+     const validatePassword = await bcrypt.compare(req.body.password, user.password)
+     if(validatePassword){
+         const token = jwt.sign({email:user.email},process.env.ACCESS_TOKEN_SECRET,{"expiresIn":"15m"})
+         const refreshtoken = jwt.sign({email:user.email},process.env.REFRESH_TOKEN_SECRET,{"expiresIn":"30m"})
+         res.send({message:"token has been Generate Successfully",token:token,refreshToken:refreshtoken})
+     } else{
+         res.send("Password is incorrect")
+     }
+    } else {
+        res.send("Your account is not activated yet.")
+    }
+    }else{
+        res.send("User not found")
+    }
+ })
 
+ app.post('/refreshtoken',(req,res)=>{
+    const refreshToken = req.body.refreshToken
+    if(refreshToken == null) return res.status(401).send("Token not found")
+    jwt.verify(refreshToken,process.env.REFRESH_TOKEN_SECRET,(err,user)=>{
+        if(err) return res.status(401).send("Token is incorrect or it is expired")
+        const accessToken = generateAccessToken({email:req.body.email})
+        const refreshtoken = jwt.sign({email:user.email},process.env.REFRESH_TOKEN_SECRET,{"expiresIn":"30m"})
+        res.send({accessToken:accessToken,refreshToken:refreshtoken})
+    })
+})
+function generateAccessToken(user){
+    return jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{"expiresIn":"15m"})
+}
+ //we want to verify token
+ const chektoken = (req,res,next)=>{
+     //here is token
+     const header = req.headers.authorization
+     const token = header && header.split(' ')[1]
+     console.log(token)
+     if(token == null) return res.send('token not found')
+     jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,verifiedJwt)=>{
+         if(err)return res.send("token is expired or it may be incorrect")
+         next();
+     })
+ }
+ app.use(chektoken);
+ app.get('/',(req,res)=>{
+     schemamodel.find((err,data)=>{
+         if(err){
+             console.log(err)
+         }
+         else{
+             res.send(data)
+         }
 
+     })
+ })
 
-
-app.listen(port,()=>{
-    console.log(`server is running on ${port}`)
+app.listen(port, () => {
+    console.log(`server is ready on ${port}`)
 })
